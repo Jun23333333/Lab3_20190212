@@ -16,6 +16,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -32,15 +33,14 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AppActivity extends AppCompatActivity implements SensorEventListener {
+public class AppActivity extends AppCompatActivity{
     private SensorManager sensorManager;
-    private Sensor acelerometro;
-    private long lastUpdate = 0;
-    private float lastX, lastY, lastZ;
-    private static final int SHAKE_THRESHOLD = 1000;
-    private static final long TIME_INTERVAL = 500; // Intervalo de tiempo deseado en milisegundos (0.5 segundos)
-
-    private boolean isShaking = false;
+    private Sensor ace;
+    private Sensor mang;
+    private float[] floatsgra = new float[3];
+    private float[] floatmag = new float[3];
+    private float[] orient = new float[3];
+    private float[] rota = new float[9];
     List<Lista> acele, mag;
     int estado = 1;
     @Override
@@ -57,6 +57,45 @@ public class AppActivity extends AppCompatActivity implements SensorEventListene
                 AlertDialog2();
             }
         });
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        ace = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mang = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+
+        SensorEventListener sensorEventListenerAce = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+                floatsgra = event.values;
+                SensorManager.getRotationMatrix(rota,null,floatsgra,floatmag);
+                SensorManager.getOrientation(rota,orient);
+                if(estado==0){
+                    RecyclerView recyclerView = findViewById(R.id.vistab);
+                    recyclerView.setAlpha((float) ((orient[0]+3.14)/6.28));
+                }
+                Log.d("orientacion", String.valueOf(orient[0]/3.14));
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+        };
+        SensorEventListener sensorEventListenerMag = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+                floatmag = event.values;
+                SensorManager.getRotationMatrix(rota,null,floatsgra,floatmag);
+                SensorManager.getOrientation(rota,orient);
+
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+        };
+
+        sensorManager.registerListener(sensorEventListenerAce,ace,SensorManager.SENSOR_DELAY_GAME);
+        sensorManager.registerListener(sensorEventListenerMag,mang,SensorManager.SENSOR_DELAY_GAME);
         acele = new ArrayList<>();
         mag = new ArrayList<>();
         Button agregar = findViewById(R.id.button1);
@@ -121,6 +160,7 @@ public class AppActivity extends AppCompatActivity implements SensorEventListene
                 transaction.commit();
                 estado = 0;
                 cambio.setText("Ir a Acelerometro");
+                vistamag();
             }else {
                 FragmentManager fragmentManager = getSupportFragmentManager();
                 FragmentTransaction transaction = fragmentManager.beginTransaction();
@@ -128,7 +168,7 @@ public class AppActivity extends AppCompatActivity implements SensorEventListene
                 transaction.commit();
                 estado = 1;
                 cambio.setText("Ir a Magnetometro");
-                acelerometro = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                vistaace();
             }
         });
     }
@@ -162,40 +202,6 @@ public class AppActivity extends AppCompatActivity implements SensorEventListene
 
         AlertDialog dialog = builder.create();
         dialog.show();
-    }
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            float x = event.values[0];
-            float y = event.values[1];
-            float z = event.values[2];
-
-            long currentTime = System.currentTimeMillis();
-
-            if ((currentTime - lastUpdate) > TIME_INTERVAL) {
-                long timeDifference = (currentTime - lastUpdate);
-                lastUpdate = currentTime;
-
-                float speed = Math.abs(x + y + z - lastX - lastY - lastZ) / timeDifference * 10000;
-
-                if (speed > SHAKE_THRESHOLD) {
-                    // Display a Toast with the acceleration
-                    String msg = "Tu Aceleracion: " + speed + "m/s^2";
-                    Toast.makeText(AppActivity.this, msg, Toast.LENGTH_SHORT).show();
-
-                }
-
-                lastX = x;
-                lastY = y;
-                lastZ = z;
-            }
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
     }
 
      public void vistaace(){
