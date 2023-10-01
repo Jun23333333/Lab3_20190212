@@ -41,6 +41,15 @@ public class AppActivity extends AppCompatActivity{
     private float[] floatmag = new float[3];
     private float[] orient = new float[3];
     private float[] rota = new float[9];
+    private long lastTime = 0;
+    private float lastAccX = 0;
+    private float lastAccY = 0;
+    private float lastAccZ = 0;
+    private float velX = 0;
+    private float velY = 0;
+    private float velZ = 0;
+
+    private double velocidad;
     List<Lista> acele, mag;
     int estado = 1;
     @Override
@@ -71,7 +80,24 @@ public class AppActivity extends AppCompatActivity{
                     RecyclerView recyclerView = findViewById(R.id.vistab);
                     recyclerView.setAlpha((float) ((orient[0]+3.14)/6.28));
                 }
-                Log.d("orientacion", String.valueOf(orient[0]/3.14));
+                float accX = event.values[0];
+                float accY = event.values[1];
+                float accZ = event.values[2];
+                long currentTime = System.currentTimeMillis();
+                long deltaTime = currentTime - lastTime;
+                velX = (accX - lastAccX) * (deltaTime);
+                velY = (accY - lastAccY) * (deltaTime);
+                velZ = (accZ - lastAccZ) * (deltaTime);
+                velocidad = Math.sqrt(Math.pow(velX,2)+Math.pow(velY,2)+Math.pow(velZ,2))/1000;
+                if(velocidad>4 && estado ==1 && velocidad<30){
+                    Toast.makeText(getApplicationContext(), "Velocidad:" + String.format("%.2f",velocidad) + "m/s2", Toast.LENGTH_SHORT).show();
+                }
+                Log.d("orientacion", String.valueOf(velocidad));
+                lastAccX = accX;
+                lastAccY = accY;
+                lastAccZ = accZ;
+                lastTime = currentTime;
+
             }
 
             @Override
@@ -85,7 +111,6 @@ public class AppActivity extends AppCompatActivity{
                 floatmag = event.values;
                 SensorManager.getRotationMatrix(rota,null,floatsgra,floatmag);
                 SensorManager.getOrientation(rota,orient);
-
             }
 
             @Override
@@ -94,7 +119,7 @@ public class AppActivity extends AppCompatActivity{
             }
         };
 
-        sensorManager.registerListener(sensorEventListenerAce,ace,SensorManager.SENSOR_DELAY_GAME);
+        sensorManager.registerListener(sensorEventListenerAce,ace,SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(sensorEventListenerMag,mang,SensorManager.SENSOR_DELAY_GAME);
         acele = new ArrayList<>();
         mag = new ArrayList<>();
